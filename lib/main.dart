@@ -29,13 +29,13 @@ class MyHomePage extends StatefulWidget {
 
 class MyPainter extends CustomPainter {
   final double zoom;
+  final double strokeWidth;
 
-  MyPainter({this.zoom = 0.3});
+  MyPainter({this.zoom = 1.0, this.strokeWidth = 2.0});
 
   @override
   void paint(Canvas canvas, Size size) {
-    double strokeWidth = 2.0;
-
+    
     Paint paintRed = Paint()
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
@@ -120,6 +120,13 @@ class _MyHomePageState extends State<MyHomePage>
 
   late AnimationController _controller;
   late Animation<double> _zoomAnimation;
+  
+  double _zoom = 0.3;
+  double _baseZoom = 0.3;
+  
+  double _strokeWidth = 2.0;
+  double _baseStrokeWidth = 2.0;
+  Offset _baseFocalPoint = Offset.zero;
 
   @override
   void initState() {
@@ -130,11 +137,13 @@ class _MyHomePageState extends State<MyHomePage>
       duration: const Duration(seconds: 15),
     );
 
+    /*
     _zoomAnimation = Tween<double>(begin: 0.10, end: 0.20)
         .animate(_controller)
       ..addListener(() {
         setState(() {});
       });
+      */
 
     _controller.forward();
   }
@@ -149,9 +158,24 @@ class _MyHomePageState extends State<MyHomePage>
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
       body: Center(
-        child: CustomPaint(
-          size: const Size(1280, 1280), // size of canvas
-          painter: MyPainter(zoom: _zoomAnimation.value),
+        child: GestureDetector(
+          onScaleStart: (details) {
+            _baseZoom = _zoom;
+            _baseStrokeWidth = _strokeWidth;
+            _baseFocalPoint = details.localFocalPoint;
+          },
+          onScaleUpdate: (details) {
+            setState(() {
+              _zoom = _baseZoom * details.scale;
+              
+              double dy = details.localFocalPoint.dy - _baseFocalPoint.dy;
+              _strokeWidth = (_baseStrokeWidth - (dy * 0.01)).clamp(0.05, 30.0);
+            });
+          },
+          child: CustomPaint(
+            size: const Size(1440, 1440), // size of canvas
+            painter: MyPainter(zoom: _zoom, strokeWidth: _strokeWidth)
+          ),
         ),
       )
     );
